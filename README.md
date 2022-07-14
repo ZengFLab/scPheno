@@ -2,7 +2,7 @@
  scPheno is a deep generative learning method for the joint analysis of scRNA-seq and phenotypes. scPheno can be broadly applied to scRNA-seq data or databases in mapping the transcriptional variations to phenotypes at single-cell level to uncover the functional insight of cell-to-cell variability.
 
 ## Citation
-Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. scPheno-XMBD: A deep generative model to integrate scRNA-seq with disease phenotypes and its application in COVID-19. Submission. 2022
+Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. scPheno-XMBD: A deep generative model to integrate scRNA-seq with phenotypes and its application in COVID-19. Submission. 2022
 
 ## Installation
 1. Install [pytorch](https://pytorch.org/get-started/locally/) according to your computational platform
