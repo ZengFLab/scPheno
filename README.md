@@ -13,7 +13,14 @@ Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. Extraction of biologica
 
 
 ## Tutorial
+
+### Example 1: THP-1 CRISPR screening
 For more information, please refer to the [THP-1](https://github.com/ZengFLab/scPheno/blob/main/thp1.ipynb) example.
+
+### Example 2: Mouse embryo development
+
+### Example 3: Multi-omics
+
 
 ## Usage
 ```
