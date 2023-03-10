@@ -1,0 +1,72 @@
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(useful)
+library(Matrix)
+library(data.table)
+
+LoadData('ifnb')
+
+ifnb <- NormalizeData(ifnb)
+ifnb <- FindVariableFeatures(ifnb, nfeatures = 5000)
+ifnb <- ScaleData(ifnb)
+ifnb <- RunPCA(ifnb, verbose = FALSE)
+ifnb <- RunUMAP(ifnb, dims=1:30)
+
+DimPlot(ifnb, reduction = 'umap', group.by = 'seurat_annotations', label = TRUE, repel = TRUE)
+
+ifnb$cell_type <- plyr::mapvalues(ifnb$seurat_annotations,
+                                  from = c('CD8 T', 'CD4 Memory T', 'T activated', 'CD4 Naive T', 'B', 'B Activated', 'CD14 Mono', 'CD16 Mono', 'pDC'),
+                                  to = c('T', 'T', 'T', 'T', 'B', 'B', 'Mono', 'Mono', 'DC'))
+
+ifnb <- FindNeighbors(ifnb, dims = 1:30, force.recalc = TRUE)
+ifnb <- FindClusters(ifnb, resolution = 1)
+
+
+
+##################################################
+cells <- colnames(ifnb)
+hvgs <- VariableFeatures(ifnb)
+
+X <- GetAssayData(ifnb, 'data')
+X <- t(X[hvgs, ] %>% as.matrix)
+X[X<0] <- 0
+
+cat('write data\n')
+spMat <- Matrix(X[cells, ], sparse = TRUE)
+cat(nrow(spMat), ',', ncol(spMat), '\n')
+writeMM(spMat, file = paste('ifnb.mtx',sep=''))
+fwrite(X, file = paste('ifnb.csv',sep=''))
+
+# save label (text)
+onehot <- model.matrix(~0+cell_type, ifnb@meta.data)
+write.table(onehot,
+            file = paste('ifnb_celltype.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+onehot <- model.matrix(~0+seurat_annotations, ifnb@meta.data)
+write.table(onehot,
+            file = paste('ifnb_cellsubtype.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+onehot <- model.matrix(~0+seurat_clusters, ifnb@meta.data)
+write.table(onehot,
+            file = paste('ifnb_cluster.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+
+onehot <- model.matrix(~0+stim, ifnb@meta.data)
+write.table(onehot,
+            file = paste('ifnb_condition.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+write.table(ifnb@meta.data[cells, c('nCount_RNA','nFeature_RNA')],
+            file = paste('ifnb_feature_metrics.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+write.table(data.frame(x=rep(1, length(cells))),
+            file = paste('ifnb_batch.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+write.table(hvgs, file = 'ifnb_genes.txt', row.names = F, col.names = F)
+write.table(cells, file = 'ifnb_cells.txt', row.names = F, col.names = F)

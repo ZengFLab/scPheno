@@ -1,0 +1,30 @@
+library(Seurat)
+library(SeuratObject)
+library(SeuratDisk)
+library(dplyr)
+library(useful)
+library(Matrix)
+library(matrixStats)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+library(ggsci)
+
+# seurat <- LoadH5Seurat('Mouse_olfa.h5seurat')
+
+data <- fread('ifnb_weights.txt',data.table = FALSE, header = TRUE)
+rownames(data) <- data[,1]
+data <- data[,-1]
+colnames(data) <- c('Cell\ntype', 'Cell\nsubtype', 'Stimulation', 'Unknown')
+
+df <- reshape2::melt(data %>% tibble::rownames_to_column(var = 'rowname'), id.vars='rowname')
+p12 <- ggplot(df, aes(variable, value, fill=variable)) +
+  geom_boxplot() +
+  labs(x='', y='Weight') +
+  theme_cowplot() +
+  theme(legend.position = 'none')  +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        axis.text.x = element_text(size = 18))
+
+save_plot(p12, filename = 'scp_weights.png', base_width = 7, base_height = 6)

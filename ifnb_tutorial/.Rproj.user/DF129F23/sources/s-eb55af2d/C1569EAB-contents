@@ -1,0 +1,60 @@
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(useful)
+library(uwot)
+library(ggpubr)
+library(patchwork)
+library(data.table)
+library(reticulate)
+
+use_python('/home/zengbio/anaconda3/envs/pyro/bin/python')
+sk <- import('sklearn')
+
+LoadData('ifnb')
+
+
+data <- fread('ifnb_denoised_expression.txt',data.table = FALSE)
+rownames(data) <- data[,1]
+data <- data[,-1]
+data <- t(data)
+
+data <- data * (10/max(data))
+counts <- expm1(data)
+
+
+recon <- CreateSeuratObject(counts, meta.data = ifnb@meta.data[colnames(data), ])
+recon <- SetAssayData(recon, slot = 'data', data)
+recon <- FindVariableFeatures(recon, nfeatures = 5000)
+recon <- ScaleData(recon)
+
+recon <- RunPCA(recon, verbose=FALSE)
+recon <- RunUMAP(recon, dims=1:18)
+
+
+recon.pos <- Embeddings(recon, reduction = 'pca')
+a <- sk$metrics$silhouette_samples(recon.pos, ifnb@meta.data[rownames(recon.pos), 'seurat_annotations'] %>% factor %>% as.numeric)
+df1 <- data.frame(Silhouette=a, source='Reconstructed')
+
+ifnb.pos <- Embeddings(ifnb, reduction = 'pca')
+b <- sk$metrics$silhouette_samples(ifnb.pos[rownames(recon.pos),], ifnb@meta.data[rownames(recon.pos), 'seurat_annotations'] %>% factor %>% as.numeric)
+df2 <- data.frame(Silhouette=b, source='Original')
+
+df <- rbind(df2,df1)
+
+
+save_plot(
+  gghistogram(df, x = "Silhouette", bins = 100,
+              # add = "mean", 
+              rug = TRUE,
+              color = "source", fill = "source",
+              palette = c("#00AFBB", "#E7B800"))  +
+    labs(x='Silhouette score', y='Frequency', title = paste('Mean diff.=',round(mean(abs(a-b)),3), ' (sd=',round(sd(abs(a-b)),3),')',sep='')) +
+    theme(plot.title = element_text(size=24, hjust = 0.5),
+          axis.title = element_text(size=24),
+          legend.title = element_blank(),
+          legend.text = element_text(size=22)),
+  filename = 'scp_silh_compare.png', base_width = 7, base_height = 6  
+)
+
+

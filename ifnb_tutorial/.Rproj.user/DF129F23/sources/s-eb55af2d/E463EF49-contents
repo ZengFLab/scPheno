@@ -1,0 +1,51 @@
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(useful)
+library(Matrix)
+library(patchwork)
+
+LoadData('ifnb')
+
+ifnb$cell_type <- plyr::mapvalues(ifnb$seurat_annotations,
+                                  from = c('CD8 T', 'CD4 Memory T', 'T activated', 'CD4 Naive T', 'B', 'B Activated', 'CD14 Mono', 'CD16 Mono', 'pDC'),
+                                  to = c('T', 'T', 'T', 'T', 'B', 'B', 'Mono', 'Mono', 'DC'))
+ifnb$stim <- plyr::mapvalues(ifnb$stim, from = 'IFN', to = 'IFNB')
+
+ifnb <- NormalizeData(ifnb)
+ifnb <- FindVariableFeatures(ifnb, nfeatures = 5000)
+ifnb <- ScaleData(ifnb)
+ifnb <- RunPCA(ifnb, verbose = FALSE)
+ifnb <- RunUMAP(ifnb, dims=1:30)
+
+
+p1 <- DimPlot(ifnb, reduction = 'umap', group.by = 'cell_type') +
+  ggtitle('Cell type') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+
+p2 <- DimPlot(ifnb, reduction = 'umap', group.by = 'seurat_annotations') +
+  ggtitle('Cell subtype') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+
+p3 <- DimPlot(ifnb, reduction = 'umap', group.by = 'stim') +
+  ggtitle('Stimulation') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+
+save_plot(p1+theme(legend.position = 'none'), filename = 'ifnb_seurat_type.png', base_width = 7, base_height = 6)
+save_plot(p1 %>% get_legend(), filename = 'ifnb_seurat_type_legend.png', base_width = 2, base_height = 6)
+
+save_plot(p2+theme(legend.position = 'none'), filename = 'ifnb_seurat_subtype.png', base_width = 7, base_height = 6)
+save_plot(p2 %>% get_legend(), filename = 'ifnb_seurat_subtype_legend.png', base_width = 2, base_height = 6)
+
+save_plot(p3+theme(legend.position = 'none'), filename = 'ifnb_seurat_stim.png', base_width = 7, base_height = 6)
+save_plot(p3 %>% get_legend(), filename = 'ifnb_seurat_stim_legend.png', base_width = 2, base_height = 6)
+
+p1 + p2 + p3
+
+save(p1, p2, p3, file = 'ifnb_seurat_plots.Robj')

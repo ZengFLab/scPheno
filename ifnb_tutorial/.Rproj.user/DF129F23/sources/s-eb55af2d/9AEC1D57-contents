@@ -1,0 +1,94 @@
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(Matrix)
+library(data.table)
+library(reticulate)
+
+
+# Specify python environment. Please change to your own environment.
+use_python('/home/zengbio/anaconda3/envs/pyro/bin/python')
+skl <- import('sklearn')
+
+
+# Load THP-1 dataset
+LoadData('thp1.eccite')
+
+
+# Preprocessing
+DefaultAssay(thp1.eccite) <- 'RNA'
+thp1.eccite <- thp1.eccite %>% NormalizeData() %>% FindVariableFeatures(nfeatures=2000) %>% ScaleData() %>% RunPCA(verbose=FALSE) %>% RunUMAP(dims=1:30)
+
+DimPlot(thp1.eccite, reduction = 'umap', group.by = 'replicate')
+
+DefaultAssay(thp1.eccite) <- 'ADT'
+thp1.eccite <- NormalizeData(thp1.eccite, normalization.method = "CLR", margin = 2) %>% ScaleData()
+
+
+###################################
+# Prepare RNA data for scPheno
+DefaultAssay(thp1.eccite) <- 'RNA'
+hvgs <- VariableFeatures(thp1.eccite)
+cells <- colnames(thp1.eccite)
+
+X <- GetAssayData(thp1.eccite, slot = 'data')
+X <- as.matrix(X[hvgs, cells]) %>% t
+
+cat('write data\n')
+fwrite(X, file='thp1_gex.txt')
+
+write.table(hvgs, file = 'thp1_genes.txt', row.names = F, col.names = F)
+write.table(cells, file = 'thp1_cells.txt', row.names = F, col.names = F)
+
+
+###################################
+# Prepare ADT data for scPheno
+DefaultAssay(thp1.eccite) <- 'ADT'
+
+X <- GetAssayData(thp1.eccite, slot = 'data')
+X <- as.matrix(X[, cells]) %>% t
+fwrite(X, file = 'thp1_adt.txt')
+
+
+###################################
+# Prepare phenotype data for scPheno
+# replicate
+enc <- skl$preprocessing$OneHotEncoder(sparse=FALSE)$fit(thp1.eccite@meta.data[cells,c('replicate'),drop=FALSE])
+onehot <- enc$transform(thp1.eccite@meta.data[,c('replicate'),drop=FALSE]) %>% as.data.frame
+colnames(onehot) <- unlist(enc$categories_)
+write.table(onehot, 
+            file = 'thp1_replicate.txt', 
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+# cell cycle
+enc <- skl$preprocessing$OneHotEncoder(sparse=FALSE)$fit(thp1.eccite@meta.data[cells,c('Phase'),drop=FALSE])
+onehot <- enc$transform(thp1.eccite@meta.data[,c('Phase'),drop=FALSE]) %>% as.data.frame
+colnames(onehot) <- unlist(enc$categories_)
+write.table(onehot, 
+            file = 'thp1_phase.txt', 
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+# replicate + cell cycle
+enc <- skl$preprocessing$OneHotEncoder(sparse=FALSE)$fit(thp1.eccite@meta.data[cells,c('replicate','Phase'),drop=FALSE])
+onehot <- enc$transform(thp1.eccite@meta.data[,c('replicate','Phase'),drop=FALSE]) %>% as.data.frame
+colnames(onehot) <- unlist(enc$categories_)
+write.table(onehot, 
+            file = 'thp1_replicate_phase.txt', 
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+
+# crispr targets
+enc <- skl$preprocessing$OneHotEncoder(sparse=FALSE)$fit(thp1.eccite@meta.data[cells,c('gene'),drop=FALSE])
+onehot <- enc$transform(thp1.eccite@meta.data[,c('gene'),drop=FALSE]) %>% as.data.frame
+colnames(onehot) <- unlist(enc$categories_)
+write.table(onehot, 
+            file = 'thp1_crispr.txt', 
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+
+# onehot <- model.matrix(~0+replicate:Phase, thp1.eccite@meta.data)
+# write.table(onehot,
+#             file = paste('thp1_replicate_phase.txt',sep=''),
+#             sep = ',', row.names = F, col.names = T, quote = T)
+
+

@@ -1,0 +1,53 @@
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(Matrix)
+
+LoadData('thp1.eccite')
+
+DefaultAssay(thp1.eccite) <- 'RNA'
+thp1.eccite <- thp1.eccite %>% NormalizeData() %>% FindVariableFeatures(nfeatures=3000) %>% ScaleData() %>% RunPCA(verbose=FALSE) %>% RunUMAP(dims=1:30)
+
+DimPlot(thp1.eccite, reduction = 'umap', group.by = 'replicate')
+
+DefaultAssay(thp1.eccite) <- 'ADT'
+thp1.eccite <- NormalizeData(thp1.eccite, normalization.method = "CLR", margin = 2) %>% ScaleData()
+
+
+
+###################################
+DefaultAssay(thp1.eccite) <- 'RNA'
+hvgs <- VariableFeatures(thp1.eccite)
+cells <- colnames(thp1.eccite)
+
+X <- GetAssayData(thp1.eccite, slot = 'data')
+X <- as.matrix(X[hvgs, cells]) %>% t
+
+cat('write data\n')
+spMat <- Matrix(X, sparse = TRUE)
+cat(nrow(spMat), ',', ncol(spMat), '\n')
+writeMM(spMat, file = paste('thp1.mtx',sep=''))
+
+
+onehot <- model.matrix(~0+replicate:Phase, thp1.eccite@meta.data)
+write.table(onehot,
+            file = paste('thp1_replicate.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+onehot <- model.matrix(~0+gene, thp1.eccite@meta.data)
+write.table(onehot,
+            file = paste('thp1_crispr.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)
+
+write.table(hvgs, file = 'thp1_genes.txt', row.names = F, col.names = F)
+write.table(cells, file = 'thp1_cells.txt', row.names = F, col.names = F)
+
+###################################
+DefaultAssay(thp1.eccite) <- 'ADT'
+cells <- colnames(thp1.eccite)
+
+X <- GetAssayData(thp1.eccite, slot = 'data')
+X <- as.matrix(X[, cells]) %>% t
+write.table(X %>% as.data.frame,
+            file = paste('thp1_adt.txt',sep=''),
+            sep = ',', row.names = F, col.names = T, quote = T)

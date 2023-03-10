@@ -1,0 +1,5 @@
+"0","DimPlot(recon, reduction = 'umap', group.by = 'cell_type') +"
+"0","  ggtitle('Factor combination 1') +"
+"0","  theme(plot.title = element_text(size=24),"
+"0","        axis.title = element_text(size=18),"
+"0","        legend.text = element_text(size=16))"

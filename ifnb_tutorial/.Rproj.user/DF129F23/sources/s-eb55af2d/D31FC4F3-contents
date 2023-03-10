@@ -1,0 +1,64 @@
+library(Seurat)
+library(SeuratObject)
+library(SeuratDisk)
+library(dplyr)
+library(useful)
+library(Matrix)
+library(matrixStats)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+library(ggsci)
+library(ggVennDiagram)
+
+# seurat <- LoadH5Seurat('Mouse_olfa.h5seurat')
+
+data <- fread('ifnb_stim_denoised_expression.txt',data.table = FALSE)
+rownames(data) <- data[,1]
+data <- data[,-1]
+data <- t(data)
+
+data <- data * (10/max(data))
+counts <- expm1(data)
+
+
+recon <- CreateSeuratObject(counts, meta.data = ifnb@meta.data[colnames(data), ])
+recon <- SetAssayData(recon, slot = 'data', data)
+recon <- FindVariableFeatures(recon, nfeatures = 5000)
+recon <- ScaleData(recon)
+
+Idents(recon) <- recon$stim
+markers.scp <- FindAllMarkers(recon, slot = 'scale.data', only.pos = TRUE)
+a <- markers.scp %>% filter(cluster=='IFN') %>% top_n(100, wt=avg_diff) %>% pull(gene) #%>% paste(collapse = '\n') %>% cat
+
+
+
+LoadData('ifnb')
+
+ifnb <- NormalizeData(ifnb)
+ifnb <- FindVariableFeatures(ifnb, nfeatures = 5000)
+ifnb <- ScaleData(ifnb)
+Idents(ifnb) <- ifnb$stim
+markers.ifnb <- FindAllMarkers(ifnb, slot = 'scale.data', only.pos = TRUE)
+b <- markers.ifnb %>% filter(cluster=='IFN') %>% top_n(100, wt=avg_diff) %>% pull(gene) #%>% paste(collapse = '\n') %>% cat
+
+
+Idents(ifnb) <- ifnb$seurat_annotations
+markers.celltype <- FindAllMarkers(ifnb, slot = 'scale.data', only.pos = TRUE)
+ct <- markers.celltype %>% group_by(cluster) %>% top_n(100, wt=avg_diff) %>% pull(gene)
+
+aAb <- intersect(a,b)
+aUb <- union(a,b)
+
+
+save_plot(
+  ggVennDiagram(list('Without decoupling'=b,'With decoupling'=a), color=1, lwd=0.8, lty=1, label_size=4, set_size=5) +
+    scale_fill_gradient(high = "#F4FAFE", low = "#4981BF") +
+    theme_cowplot() +
+    theme(legend.position = 'none',
+          axis.title = element_blank(),
+          axis.line = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank()),
+  filename = 'deg_overlap.png'
+)

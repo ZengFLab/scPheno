@@ -1,0 +1,53 @@
+library(Seurat)
+library(SeuratObject)
+library(SeuratDisk)
+library(dplyr)
+library(useful)
+library(Matrix)
+library(matrixStats)
+library(data.table)
+library(ggplot2)
+library(cowplot)
+library(ggsci)
+
+# seurat <- LoadH5Seurat('Mouse_olfa.h5seurat')
+
+data <- fread('ifnb_denoised_expression.txt',data.table = FALSE)
+rownames(data) <- data[,1]
+data <- data[,-1]
+data <- t(data)
+
+data <- data * (10/max(data))
+counts <- expm1(data)
+
+
+recon <- CreateSeuratObject(counts, meta.data = ifnb@meta.data[colnames(data), ])
+recon <- SetAssayData(recon, slot = 'data', data)
+recon <- FindVariableFeatures(recon, nfeatures = 5000)
+recon <- ScaleData(recon)
+
+recon <- RunPCA(recon, verbose=FALSE)
+recon <- RunUMAP(recon, dims=1:18)
+# recon <- RunTSNE(recon, dims=1:5, perplexity=90, num_threads=10, max_iter=3000, verbose=TRUE)
+
+# recon <- FindNeighbors(recon, reduction = 'umap', dims = 1:2, force.recalc = TRUE)
+# recon <- FindClusters(recon, resolution = 0.04)
+
+p4 <- DimPlot(recon, reduction = 'umap', group.by = 'seurat_annotations') +
+  ggtitle('Factor combination 5') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+save_plot(p4+theme(legend.position = 'none'), filename = 'scp_recon_celltype.png', base_width = 7, base_height = 6)
+save_plot(p4 %>% get_legend(), filename = 'scp_recon_celltype_legend.png', base_width = 2, base_height = 6)
+
+p5 <- DimPlot(recon, reduction = 'umap', group.by = 'stim') +
+  ggtitle('Factor combination 5') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+save_plot(p5+theme(legend.position = 'none'), filename = 'scp_recon_stim.png', base_width = 7, base_height = 6)
+save_plot(p5 %>% get_legend(), filename = 'scp_recon_stim_legend.png', base_width = 2, base_height = 6)
+
+
+

@@ -1,0 +1,66 @@
+---
+title: "Reconstruction"
+output:
+  pdf_document: default
+  html_document: default
+date: '2023-03-10'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Create a Seurat object for the reconstructed data
+
+```{r}
+library(Seurat)
+library(SeuratObject)
+library(SeuratData)
+library(dplyr)
+library(useful)
+library(data.table)
+
+LoadData('ifnb')
+ifnb$cell_type <- plyr::mapvalues(ifnb$seurat_annotations,
+                                  from = c('CD8 T', 'CD4 Memory T', 'T activated', 'CD4 Naive T', 'B', 'B Activated', 'CD14 Mono', 'CD16 Mono', 'pDC'),
+                                  to = c('T', 'T', 'T', 'T', 'B', 'B', 'Mono', 'Mono', 'DC'))
+ifnb$cell_subtype <- ifnb$seurat_annotations
+
+
+data <- fread('ifnb_celltype_denoised_expression.txt',data.table = FALSE)
+rownames(data) <- data[,1]
+data <- data[,-1]
+data <- t(data)
+
+counts <- expm1(data)
+
+
+recon <- CreateSeuratObject(counts, meta.data = ifnb@meta.data[colnames(data), ])
+recon <- SetAssayData(recon, slot = 'data', data)
+recon <- FindVariableFeatures(recon, nfeatures = 5000)
+recon <- ScaleData(recon)
+
+recon <- RunPCA(recon, verbose=FALSE)
+recon <- RunUMAP(recon, dims=1:30)
+```
+
+## Plot cell type
+
+```{r pressure, echo=FALSE}
+DimPlot(recon, reduction = 'umap', group.by = 'cell_type') +
+  ggtitle('Factor combination 1') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+```
+
+
+## Plot cell subtype
+```{r cell_subtype}
+DimPlot(recon, reduction = 'umap', group.by = 'cell_subtype') +
+  ggtitle('Factor combination 1') +
+  theme(plot.title = element_text(size=24),
+        axis.title = element_text(size=18),
+        legend.text = element_text(size=16))
+
+```
