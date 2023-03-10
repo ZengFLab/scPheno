@@ -38,6 +38,14 @@ scPheno example run: python scPheno.py --sup-data-file <sup_data_file> --sup-lab
 Users can specify the type of phenotype variable by setting ```--label-type```, ```--condition-type```, ```--condition2-type```.
 
 scPheno supports various types of phenotype variables, including
-1. Category
-2. One-hot encoding
-3. 
+1. categorical: Categorical variable
+2. onehot: One-hot encoding variable
+3. compositional: relative abundance
+4. real: normal variable
+
+
+## Types of likelihood function
+scPheno supports the following distributions for observed expression data:
+1. negbinomial: Negative-binomial
+2. poisson: Poisson
+3. multinomial: Multinomial
