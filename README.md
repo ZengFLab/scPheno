@@ -1,5 +1,5 @@
 # scPheno
- scPheno can be broadly applied to scRNA-seq data or databases in mapping the transcriptional variations to phenotypes at single-cell level to uncover the functional insight of cell-to-cell variability.
+ scPheno is to extract variations on gene expression associated with phenotypes, which can be categorical, compositional, normal, and discrete covariates.
 
 ## Citation
 Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. Extraction of biological signals by factorization enables the reliable analysis of single-cell transcriptomics. Submission. 2023
