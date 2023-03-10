@@ -1,8 +1,8 @@
 # scPheno
- scPheno is a deep generative learning method for the joint analysis of scRNA-seq and phenotypes. scPheno can be broadly applied to scRNA-seq data or databases in mapping the transcriptional variations to phenotypes at single-cell level to uncover the functional insight of cell-to-cell variability.
+ scPheno can be broadly applied to scRNA-seq data or databases in mapping the transcriptional variations to phenotypes at single-cell level to uncover the functional insight of cell-to-cell variability.
 
 ## Citation
-Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. scPheno-XMBD: A deep generative model to integrate scRNA-seq with phenotypes and its application in COVID-19. Submission. 2022
+Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. Extraction of biological signals by factorization enables the reliable analysis of single-cell transcriptomics. Submission. 2023
 
 ## Installation
 1. Install [pytorch](https://pytorch.org/get-started/locally/) according to your computational platform
@@ -32,3 +32,12 @@ scPheno example run: python scPheno.py --sup-data-file <sup_data_file> --sup-lab
 
 ```
 
+
+## Types of phenotype variables
+
+Users can specify the type of phenotype variable by setting ```--label-type```, ```--condition-type```, ```--condition2-type```.
+
+scPheno supports various types of phenotype variables, including
+1. Category
+2. One-hot encoding
+3. 
