@@ -7,8 +7,9 @@ Feng Zeng, Xuwen Kong, Fan Yang, Ting Chen, Jiahuai Han. scPheno-XMBD: A deep ge
 ## Installation
 1. Install [pytorch](https://pytorch.org/get-started/locally/) according to your computational platform
 2. Install dependencies:
-    `pip3 install numpy scipy pandas scikit-learn pyro-ppl matplotlib`
-    `pip install datatable`
+    - `pip3 install numpy scipy pandas scikit-learn pyro-ppl matplotlib`
+
+    - `pip install datatable`
 
 
 ## Tutorial
