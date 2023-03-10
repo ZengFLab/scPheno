@@ -47,8 +47,9 @@ Users can specify the type of phenotype variable by setting ```--label-type```, 
 scPheno supports various types of phenotype variables, including
 1. categorical: Categorical variable
 2. onehot: One-hot encoding variable
-3. compositional: relative abundance
-4. real: normal variable
+3. compositional: relative abundance, whose sum equals to one
+4. rate: ratios, whose sum cannot equal to one
+5. real: normal variable
 
 
 ## Likelihood function
