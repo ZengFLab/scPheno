@@ -10,22 +10,31 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.functional import normalize
 from pyro.contrib.examples.util import get_data_directory
 
+import datatable as dt
+
 # transformations for single cell data
-def fn_x_scdata(x, log_trans = False, use_cuda = True, use_float64 = False):
+def fn_x_scdata(x, log_trans = False, exp_trans=False, use_cuda = True, use_float64 = False):
     if use_float64:
         xp = x.double()
     else:
         xp = x.float()
 
     if log_trans:
-        xp = torch.log(xp + 1.)
+        xp = torch.log1p(xp)
+
+    if exp_trans:
+        xp = torch.expm1(xp)
+
+    xp = torch.round(xp)
+
     # 
     # send the data to GPU(s)
-    #if use_cuda:
-    #    xp = xp.cuda()
+    if use_cuda:
+        xp = xp.cuda()
     #
     return xp
 
+"""
 def fn_y_scdata(y, num_classes, use_cuda, use_float64 = False):
     yp = torch.zeros(y.shape[0], num_classes)
     #
@@ -43,6 +52,30 @@ def fn_y_scdata(y, num_classes, use_cuda, use_float64 = False):
         yp = yp.float()
 
     return yp
+"""
+
+def fn_y_scdata(y, use_cuda = True, use_float64 = False):
+    if use_float64:
+        yp = y.double()
+    else:
+        yp = y.float()
+
+    if use_cuda:
+        yp = yp.cuda()
+
+    return yp
+
+def fn_k_scdata(k, use_cuda = True, use_float64 = False):
+    if use_float64:
+        kp = k.double()
+    else:
+        kp = k.float()
+           
+    # send the data to GPU(s)
+    if use_cuda:
+        kp = kp.cuda()
+
+    return kp
 
 def split_sup_valid(X, y, validation_num=10000):
     """
@@ -61,7 +94,7 @@ def split_sup_valid(X, y, validation_num=10000):
 
     return X_sup, y_sup, X_valid, y_valid
 
-class SingleCellCached(Dataset):
+"""class SingleCellCached(Dataset):
     def __init__(self, data_file, label_file = None, condition_file = None, label2class = None, cond2index = None, mode = 'sup', log_trans = False, use_cuda = False, use_float64 = False):
         super(SingleCellCached).__init__()
         #super().__init__(**kwargs)
@@ -125,11 +158,102 @@ class SingleCellCached(Dataset):
             ks = ""
 
         return xs, ys, ks
-            
+"""
+
+# use one-hot encoding
+class SingleCellCached(Dataset):
+    def __init__(self, data_file, label_file = None, condition_file = None, condition_file2 = None, mode = 'sup', log_trans = False, exp_trans=False, use_cuda = False, use_float64 = False):
+        super(SingleCellCached).__init__()
+        #super().__init__(**kwargs)
+
+        #self.data = mmread(data_file).todense()
+        self.data = dt.fread(file=data_file, header=True).to_numpy()
+
+        if label_file is None:
+            self.labels = None
+            self.label_names = None
+            self.num_classes = None
+        else:
+            self.labels = dt.fread(label_file, header=True).to_pandas().astype(dtype='float')
+            self.label_names = self.labels.columns.tolist()
+            self.labels = self.labels.values
+            self.num_classes = len(self.label_names)
+
+        if condition_file is None:
+            self.conditions = None
+            self.condition_names = None
+            self.num_conditions = None
+        else:
+            self.conditions = dt.fread(condition_file, header=True).to_pandas().astype(dtype='float')
+            self.condition_names = self.conditions.columns.tolist()
+            self.conditions = self.conditions.values
+            self.num_conditions = len(self.condition_names)
+
+        if condition_file2 is None:
+            self.conditions2 = None
+            self.condition_names2 = None
+            self.num_conditions2 = None
+        else:
+            self.conditions2 = dt.fread(condition_file2, header=True).to_pandas().astype(dtype='float')
+            self.condition_names2 = self.conditions2.columns.tolist()
+            self.conditions2 = self.conditions2.values
+            self.num_conditions2 = len(self.condition_names2)
+        
+        self.data = torch.from_numpy(self.data)
+        if self.labels is not None:
+            self.labels = torch.from_numpy(self.labels)
+        if self.conditions is not None:
+            self.conditions = torch.from_numpy(self.conditions)
+        if self.conditions2 is not None:
+            self.conditions2 = torch.from_numpy(self.conditions2)
+        self.use_cuda = use_cuda
+        self.mode = mode
+
+        # transformations on single cell data (normalization and one-hot conversion for labels)
+        def transform(x):
+            return fn_x_scdata(x, log_trans, exp_trans, use_cuda, use_float64)
+
+        def target_transform(y):
+            return fn_y_scdata(y, use_cuda, use_float64)
+
+        def condition_transform(k):
+            return fn_k_scdata(k, use_cuda, use_float64)
+
+        self.data = transform(self.data)
+        if self.labels is not None:
+            self.labels = target_transform(self.labels)
+        if self.conditions is not None:
+            self.conditions = condition_transform(self.conditions)
+        if self.conditions2 is not None:
+            self.conditions2 = condition_transform(self.conditions2)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, index):
+        xs = self.data[index]
+
+        if self.labels is not None:
+            ys = self.labels[index]
+        else:
+            ys = ""
+
+        if self.conditions is not None:
+            ks = self.conditions[index]
+        else:
+            ks = ""
+        
+        if self.conditions2 is not None:
+            ks2 = self.conditions2[index]
+        else:
+            ks2 = ""
+
+        return xs, ys, ks, ks2
+
 def setup_data_loader(
     dataset, 
-    data_file, label_file, condition_file, label2class, cond2index,
-    mode, fold, log_trans, use_cuda, use_float64,
+    data_file, label_file, condition_file, condition_file2,
+    mode, fold, log_trans, exp_trans, use_cuda, use_float64,
     batch_size, **kwargs
 ):
     """
@@ -150,9 +274,8 @@ def setup_data_loader(
         kwargs = {"num_workers": 0, "pin_memory": False}
 
     cached_data0 = dataset(
-        data_file = data_file, label_file = label_file, condition_file = condition_file,
-        label2class = label2class, cond2index = cond2index,
-        mode = mode, log_trans = log_trans, use_cuda = use_cuda, use_float64 = use_float64
+        data_file = data_file, label_file = label_file, condition_file = condition_file, condition_file2 = condition_file2,
+        mode = mode, log_trans = log_trans, exp_trans = exp_trans, use_cuda = use_cuda, use_float64 = use_float64
     )
     
     if mode == 'sup':
@@ -161,6 +284,9 @@ def setup_data_loader(
             valid_num = int(np.round(data_num * fold))
             sup_num = data_num - valid_num
             cached_data, cached_valid = random_split(cached_data0, [sup_num, valid_num])
+        else:
+            cached_data = cached_data0
+            cached_valid = None
     else:
         cached_data = cached_data0
         cached_valid = None
