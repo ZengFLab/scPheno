@@ -21,7 +21,7 @@ For more information, please refer to the [IFNB](https://github.com/ZengFLab/scP
 
 ### Example 3: Mouse embryo development
 
-![Embryonic time is modeled by using Normal distribution.](https://github.com/ZengFLab/scPheno/blob/main/ifnb.ipynb)
+![Embryonic time is modeled by using Normal distribution.](https://github.com/ZengFLab/scPheno/blob/main/images/embryo.png)
 
 ## Usage
 ```
