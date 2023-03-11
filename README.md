@@ -25,6 +25,12 @@ scPheno supports multiple types of phenotype variables. Mouse embryo development
 
 ![Embryonic time is modeled by using Normal distribution.](https://github.com/ZengFLab/scPheno/blob/main/images/embryo.png)
 
+### Example 4: Evaluate KRAS mutant
+
+We used scPheno to quantify the effect of various KRAS mutants. 
+
+![KRAS mutant.](https://github.com/ZengFLab/scPheno/blob/main/images/KRAS.png)
+
 ## Usage
 ```
 usage: scPheno.py [-h] [--cuda] [--jit] [-n NUM_EPOCHS] [-bs BATCH_SIZE] [-lr LEARNING_RATE]
